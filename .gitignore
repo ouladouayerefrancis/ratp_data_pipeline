@@ -32,3 +32,6 @@ data/gold/
 # Système
 .DS_Store
 Thumbs.db
+
+# Spark — sorties générées
+training/pyspark/output/

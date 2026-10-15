@@ -1,0 +1,5 @@
+event_id,event_timestamp,line,station,event_type,passenger_count
+8001,2026-10-14 06:10:00,A,Nation,validation,140
+8002,not-a-date,B,Gare du Nord,validation,abc
+8003,2026-10-14 06:30:00,,Bastille,incident,0
+8004,2026-10-14 06:40:00,D,Chatelet,validation,-5

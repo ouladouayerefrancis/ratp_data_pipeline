@@ -1,0 +1,10 @@
+event_id,event_timestamp,line,station,event_type,passenger_count
+11001,2026-10-14 06:00:00,A,Nation,validation,120
+11002,2026-10-14 06:05:00,B,Gare du Nord,validation,170
+11002,2026-10-14 06:05:00,B,Gare du Nord,validation,170
+11003,2026-10-14 06:10:00,C,Bastille,incident,0
+11003,2026-10-14 06:10:00,C,Bastille,incident,25
+11004,not-a-date,A,Chatelet,validation,150
+11005,2026-10-14 06:20:00,Z,Nation,validation,100
+11006,2026-10-14 06:25:00,B,Bastille,validation,-10
+11007,2026-10-14 06:30:00,A,Nation,validation,200
