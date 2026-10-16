@@ -1,0 +1,7 @@
+# Politique de fins de ligne du projet
+# Le dépôt conserve les fichiers texte en LF.
+* text=auto eol=lf
+
+# Scripts Windows éventuels
+*.bat text eol=crlf
+*.cmd text eol=crlf

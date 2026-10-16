@@ -1,26 +1,33 @@
-# Bloc 4 — Agrégations PySpark
-# groupBy(), agg(), count(), sum(), avg()
+# Bloc 4 — groupBy() et agrégations avec PySpark
+# Objectif :
+# transformer des événements détaillés en indicateurs métier.
 
 import os
 import sys
 
+# Configuration locale Windows :
+# Driver et Workers utilisent le même interpréteur Python.
 os.environ["PYSPARK_PYTHON"] = sys.executable
 os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
+
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
     count,
-    sum,
+    sum as _sum,
     avg,
-    min,
-    max,
-    col,
+    min as _min,
+    max as _max,
 )
 
 
+# -------------------------------------------------------
+# 1. Création de la SparkSession
+# -------------------------------------------------------
+
 spark = (
     SparkSession.builder
-    .appName("RATP-PySpark-Aggregations")
+    .appName("RATP-PySpark-GroupBy-Aggregations")
     .master("local[*]")
     .config("spark.pyspark.python", sys.executable)
     .config("spark.pyspark.driver.python", sys.executable)
@@ -30,97 +37,160 @@ spark = (
 spark.sparkContext.setLogLevel("ERROR")
 
 
-data = [
-    (7001, "A", "Nation", "validation", 120),
-    (7002, "B", "Gare du Nord", "validation", 175),
-    (7003, "C", "Bastille", "incident", 0),
-    (7004, "A", "Nation", "validation", 220),
-    (7005, "B", "Gare du Nord", "validation", 190),
-    (7006, "C", "Bastille", "incident", 25),
-]
+try:
 
-columns = [
-    "event_id",
-    "line",
-    "station",
-    "event_type",
-    "passenger_count",
-]
+    # ---------------------------------------------------
+    # 2. Création du DataFrame d'événements
+    # ---------------------------------------------------
 
-df = spark.createDataFrame(data, columns)
+    data = [
+        (1, "A", "Chatelet", "ENTRY", 120),
+        (2, "A", "Nation", "ENTRY", 80),
+        (3, "A", "Chatelet", "EXIT", 150),
+        (4, "B", "Gare du Nord", "ENTRY", 200),
+        (5, "B", "Gare du Nord", "EXIT", 180),
+        (6, "B", "Republique", "ENTRY", 100),
+    ]
 
+    columns = [
+        "event_id",
+        "line",
+        "station",
+        "event_type",
+        "passenger_count",
+    ]
 
-# ============================================================
-# 1. COUNT PAR LIGNE
-# ============================================================
-
-print("\n=== NOMBRE D'EVENEMENTS PAR LIGNE ===")
-
-df_count_by_line = (
-    df.groupBy("line")
-    .agg(
-        count("*").alias("total_events")
+    df = spark.createDataFrame(
+        data,
+        columns,
     )
-    .orderBy("line")
-)
-
-df_count_by_line.show()
 
 
-# ============================================================
-# 2. SOMME DES PASSAGERS PAR LIGNE
-# ============================================================
+    print("\n=== DATAFRAME INITIAL ===")
 
-print("\n=== TOTAL PASSAGERS PAR LIGNE ===")
+    df.show(truncate=False)
 
-df_passengers_by_line = (
-    df.groupBy("line")
-    .agg(
-        sum("passenger_count").alias("total_passengers")
+
+    # ---------------------------------------------------
+    # 3. Agrégation simple par ligne
+    # ---------------------------------------------------
+
+    print("\n=== PASSAGERS PAR LIGNE ===")
+
+    passengers_by_line_df = (
+        df
+        .groupBy("line")
+        .agg(
+            _sum("passenger_count").alias("total_passengers")
+        )
+        .orderBy("line")
     )
-    .orderBy("line")
-)
 
-df_passengers_by_line.show()
+    passengers_by_line_df.show()
 
 
-# ============================================================
-# 3. PLUSIEURS AGREGATIONS
-# ============================================================
+    # ---------------------------------------------------
+    # 4. Plusieurs agrégations en même temps
+    # ---------------------------------------------------
 
-print("\n=== METRIQUES PAR LIGNE ===")
+    print("\n=== STATISTIQUES PAR LIGNE ===")
 
-df_metrics = (
-    df.groupBy("line")
-    .agg(
-        count("*").alias("total_events"),
-        sum("passenger_count").alias("total_passengers"),
-        avg("passenger_count").alias("avg_passengers"),
-        min("passenger_count").alias("min_passengers"),
-        max("passenger_count").alias("max_passengers"),
+    statistics_by_line_df = (
+        df
+        .groupBy("line")
+        .agg(
+            count("*").alias("total_events"),
+            _sum("passenger_count").alias("total_passengers"),
+            avg("passenger_count").alias("average_passengers"),
+            _min("passenger_count").alias("minimum_passengers"),
+            _max("passenger_count").alias("maximum_passengers"),
+        )
+        .orderBy("line")
     )
-    .orderBy("line")
-)
 
-df_metrics.show()
-
-
-# ============================================================
-# 4. AGREGATION PAR TYPE D'EVENEMENT
-# ============================================================
-
-print("\n=== METRIQUES PAR TYPE D'EVENEMENT ===")
-
-df_by_event_type = (
-    df.groupBy("event_type")
-    .agg(
-        count("*").alias("total_events"),
-        sum("passenger_count").alias("total_passengers"),
+    statistics_by_line_df.show(
+        truncate=False
     )
-    .orderBy("event_type")
-)
-
-df_by_event_type.show()
 
 
-spark.stop()
+    # ---------------------------------------------------
+    # 5. Agrégation avec plusieurs clés
+    # ---------------------------------------------------
+
+    print(
+        "\n=== PASSAGERS PAR LIGNE ET TYPE D'ÉVÉNEMENT ==="
+    )
+
+    passengers_by_line_event_df = (
+        df
+        .groupBy(
+            "line",
+            "event_type",
+        )
+        .agg(
+            count("*").alias("total_events"),
+            _sum("passenger_count").alias(
+                "total_passengers"
+            ),
+        )
+        .orderBy(
+            "line",
+            "event_type",
+        )
+    )
+
+    passengers_by_line_event_df.show(
+        truncate=False
+    )
+
+
+    # ---------------------------------------------------
+    # 6. Agrégation par station
+    # ---------------------------------------------------
+
+    print("\n=== PASSAGERS PAR STATION ===")
+
+    passengers_by_station_df = (
+        df
+        .groupBy(
+            "line",
+            "station",
+        )
+        .agg(
+            _sum("passenger_count").alias(
+                "total_passengers"
+            )
+        )
+        .orderBy(
+            "line",
+            "station",
+        )
+    )
+
+    passengers_by_station_df.show(
+        truncate=False
+    )
+
+
+    # ---------------------------------------------------
+    # 7. Observation du plan Spark
+    # ---------------------------------------------------
+
+    print("\n=== PLAN D'EXÉCUTION ===")
+
+    passengers_by_line_df.explain(
+        mode="formatted"
+    )
+
+
+finally:
+
+    # ---------------------------------------------------
+    # 8. Arrêt propre de Spark
+    # ---------------------------------------------------
+
+    spark.stop()
+
+    print(
+        "\nSparkSession arrêtée proprement."
+    )
